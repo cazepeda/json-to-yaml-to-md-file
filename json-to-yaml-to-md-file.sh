@@ -20,13 +20,12 @@ mkdir -p "$output_dir"
 # Extract each object from JSON and convert to Markdown
 jq -c '.[]' "$input_json" | while read -r obj; do
     # Generate a unique filename based on some property of the JSON object
-    # filename="$output_dir/$(echo "$obj" | jq -r '"\(.time).\(.description)"').md"
     filename="$output_dir/$(echo "$obj" | jq -r '"\(.time|tostring|fromdate|strftime("%Y-%m-%d")).\(.description | ascii_downcase | gsub("\""; "\""))" | gsub(" "; "-") | gsub("\\("; "") | gsub("\\)"; "") | gsub("\\\""; "") | gsub("“"; "") | gsub("”"; "") | gsub(":"; "")').md"
     
     # Convert JSON object to Markdown and save it to the file
-    echo -e "$obj" | jq -r '["---"] + (to_entries | map("\(.key): \(.value)")) + ["---"] | join("\n")' > "$filename"
+    echo -e "$obj" | jq -r '["---"] + (to_entries | map(if .key == "description" then { key: "title", value: .value } elif .key == "time" then { key: "date", value: .value } else { key: .key, value: .value } end) | map("\(.key): \(.value)")) + ["---"] | join("\n")' > "$filename"
 
-    echo "Converted and saved to: $filename"
+    echo "JSON objects converted to YAML data and made into Markdown files: $filename"
 done
 
 # END CREATE MARKDOWN FILES FROM JSON
@@ -68,7 +67,7 @@ for file in "$directory"/*.md; do
 
         # Replace the original file with the updated content
         mv "$temp_file" "$file"
-        echo "Updated: $file"
+        echo "Tags converted to list values: $file"
     fi
 done
 
@@ -77,7 +76,7 @@ done
 # ADD SINGLE TICKS TO SPECIFIED KEYS
 
 # Specify the keys for which values should be enclosed in single quotes
-target_keys=("href" "description" "time")
+target_keys=("href" "title" "date" "shared" "toread")
 
 # Directory containing Markdown-like files
 directory="/path/to/directory/output_markdown"
@@ -96,6 +95,6 @@ for file in "$directory"/*.md; do
     fi
 done
 
-echo "Update complete."
+echo "Added ticks to target_keys completed."
 
 # END ADD SINGLE TICKS TO SPECIFIED KEYS
